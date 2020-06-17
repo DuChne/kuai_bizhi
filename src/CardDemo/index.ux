@@ -1,0 +1,255 @@
+<template>
+  <!-- template里只能有一个根节点 -->
+  <div class="demo-page">
+      <div><text>{{a}}</text></div>
+     <swiper  class="swiper" 
+      autoplay="{{autoPlay}}" 
+      @change="swiperfun" 
+      interval="{{sliderValue}}" indicator="{{indicator}}"  
+      duration="{{durationValue}}" 
+      vertical="{{isVertical}}" 
+      loop="{{loopPlay}}" 
+      id="swiper" 
+     >          
+        <div class="item color-1"  style="width:750px;border:1px solid #000000;" for="{{listArr}}">
+              <image src="{{$item.preview}}" style="width:750px;"></image>
+        </div>
+      </swiper >
+      <div class="downdiv">
+        <div class="ondDiv" @click="imaDownload()">
+            <image src="../Common/wallpaper-down.png" style="width:46px;height:46px;"></image>
+            <text style="font-size:34px;color:#ffffff">下载</text>
+        </div>
+        <div class="ondDiv" @click="shareFun">
+            <image src="../Common/wallpaper-share.png" style="width:46px;height:46px;"></image>
+            <text style="font-size:34px;color:#ffffff">分享</text>
+        </div>
+        <div class="borderA"></div>
+      </div>    
+
+  </div>
+</template>
+
+<script>
+import storage from '@system.storage'
+import prompt from '@system.prompt'  
+import request from '@system.request'
+import media from '@system.media'
+import share from '@system.share'
+import shareSe from '@service.share'
+import fetch from '@system.fetch'
+
+export default {
+  private: {
+    autoPlay: false,
+    sliderValue: 1000,
+    indicator: false,
+    isVertical: false,
+    loopPlay: false,
+    newIndex:'',
+    newId:'',
+    imgUrl:'',
+    listArr:[],
+    imgArr:[],
+    a:'',
+    b:'',
+    c:'',
+    url:''
+
+  },
+
+  onShow(){     
+        APP_STATISTICS.page_show( this );//在onShow方法的第一行加入此代码
+        //App业务代码
+        var that=this;
+        storage.get({
+        key:'list',
+        success: function(data) {  
+            that.listArr=data?JSON.parse(data):[]; 
+            var arr=[];                            
+            for(let i in that.listArr){
+                arr.push(that.listArr[i].preview)
+            }
+            that.imgArr=arr
+            that.url=that.listArr[parseInt(that.newIndex)].preview
+            var time=setTimeout(()=>{
+                that.$element('swiper').swipeTo({index:parseInt(that.newIndex)}) 
+                
+            },100)
+        }}) 
+    },
+    onHide() {
+
+        APP_STATISTICS.page_hide( this ); //在onHide方法的第一行加入此代码
+        //...业务代码
+    } ,
+    onInit () {
+      // this.getChannelIsH();
+      this.newIndex = this.$page.query.index;
+      this.newId = this.$page.query.id;    
+     
+      var that=this;     
+      
+    },
+    onReady() {       
+        
+        // this.$element('swiper').swipeTo({index:parseInt(this.newIndex)}) 
+
+    },
+  swiperfun(e){
+      let that=this;
+        if(e.target){
+                console.log(e,123465)
+            var indexImg=e.target.attr.index?e.target.attr.index:e.index
+            var time=setTimeout(()=>{
+
+                console.log(that.listArr[parseInt(indexImg)])
+                that.url=that.listArr[parseInt(indexImg)].preview                
+            },100)
+        }
+        
+    },
+    imaDownload(){
+        let that=this;
+        let photoPath = that.url;
+        let list = photoPath.split('.');
+        /* 用时间来作为图片的名字 */
+        let timeValue = new Date().valueOf();
+        /* 获取图片后缀 */
+        let photoExt = "jpg";
+        // let photoExt = list[list.length - 1];
+        /* 设置要保存的图片名 */
+        let filename = `${timeValue}.${photoExt}`;
+        request.download({
+        url: photoPath,
+        filename: filename,
+        success: data => {
+            /* 监听下载任务：1000下载失败，1001下载任务不存在 */
+            request.onDownloadComplete({
+            token: data.token,
+            success: data => {
+                /* 保存图片 */
+                media.saveToPhotosAlbum({
+                uri: data.uri,
+                success: () => {
+                    prompt.showToast({
+                    message: '图片保存成功！'
+                    })
+                },
+                fail: (data, code) => {
+                     prompt.showToast({
+                    message: code
+                })
+                    if(code == 201) {
+                    prompt.showToast({
+                        message: '授权成功后才能保存图片哦'
+                    })
+                    } else if(code == 202) {
+                    prompt.showToast({
+                        message: '参数错误'
+                    })
+                    } else if(code == 300) {
+                    prompt.showToast({
+                        message: 'I/O错误，图片保存失败'
+                    })
+                    }
+                }
+                })
+            },
+            fail: (data, code) => {
+                if(code == 1000) {
+                prompt.showToast({
+                    message: '图片下载失败'
+                })
+                } else if(code == 1001) {
+                prompt.showToast({
+                    message: '下载任务不存在'
+                })
+                }
+            }
+            })
+        },
+        fail: () => {
+
+        }
+        })
+    },
+    shareFun(){
+        let that=this;
+        try{
+            shareSe.share({
+                    shareType: 0,
+                    title: '这是什么神仙壁纸哇',
+                    summary: '点击查看',
+                    imagePath: '/img/图文消息图片.jpg',
+                    targetUrl: 'https://hapjs.org/app/com.kuaiy_bz.alg/Index',
+                    success: function (data) {
+                            console.log('handling success')
+                    },
+                    fail: function (data, code) {
+                            console.log(`handling fail, code = ${code}`)
+                    }
+            });
+        }catch(err){
+            share.share({
+                    type: 'text/webviewhtml',
+                    data: '分享的文字消息',
+                    success: function (data) {
+                            console.log('handling success')
+                    },
+                    fail: function (data, code) {
+                            console.log(`handling fail, code = ${code}`)
+                    }
+            });
+        }  
+    },
+    chaFun(){
+        media.previewImage({
+        current: this.url,
+        uris: [
+            'http://www.xxx.com/a.jpg',
+            'http://www.xxx.com/b.jpg',
+            'http://www.xxx.com/c.jpg'
+        ],
+        success: function() {
+            console.log('preview success')
+        },
+        fail: function(data, code) {
+            console.log('preview fail, code = ${code}')
+        }
+        })
+    }
+
+}
+</script>
+
+<style>
+  .demo-page {
+    flex-direction: column;
+  }
+  .swiper {
+    width: 750px;
+    flex-direction: column;
+    position: fixed;
+    top: 0px;
+    bottom: 0px;
+  }
+  .downdiv{
+      width: 750px;
+      height: 128px;
+      position: fixed;
+      left: 0px;
+      bottom: 0px;
+      background-color: rgba(41,61,110,.4);
+
+  }
+  .ondDiv{
+      width: 375px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+  }
+  .borderA{
+      position: absolute;top: 35px;height: 60px;border-right: 1px solid #ffffff;width: 10px;left: 375px;
+  }
+</style>

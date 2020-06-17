@@ -1,0 +1,122 @@
+<template>
+  <div class="demo-page">
+    <!-- <div for="{{appletsArr}}"><text>{{$item.preview}}</text></div> -->
+    <list class="listDiv"  onscrollbottom="chuwallFun" flex-direction="column" columns="3">
+        <list-item class="wallpaper" for="{{appletsArr}}"  @click="toSwiper($idx,$item.id)">
+           <div class='wallpapera' >
+             <img src="{{$item.preview}}" alt="" style="margin-top:{{$idx%3==0?'12px':''}}" class="wallpapera">
+           </div>
+        </list-item>   
+    </list>   
+    <!-- <div><text>{{a}}</text></div> -->
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import fetch from '@system.fetch'
+import allAreaNews from "../Common/areaInfo.js";
+import prompt from '@system.prompt'
+import device from '@system.device'
+
+import webview from '@system.webview'
+import storage from '@system.storage'
+
+
+export default {
+ 
+  private: {
+    newId:'',
+    page:1,
+    a:'',
+    appletsArr:[]
+  },
+  onInit () {
+    // 设置标题栏
+    this.$page.setTitleBar({ text: this.$page.query.name })
+    this.newId = this.$page.query.id;
+    this.applets()
+  },
+  createShortcut () {
+    
+  },
+   applets(){
+      const that = this;
+        fetch.fetch({
+            url: 'https://news.moxiu.com/applets/wallpaper/content?cateId='+that.newId+'&page='+that.page,
+            method: 'get',
+            resphonseType: 'json',
+            header: {
+                'Content-Type': 'application/json',
+            },
+            success: function (res) {
+            var resphose = res.data;
+            if (JSON.parse(resphose).code == 200 ) {
+               that.appletsArr= that.appletsArr.concat(JSON.parse(resphose).data.list);
+            }
+            },
+            fail: function (err) {}
+        })
+    },
+    chuwallFun(){
+      this.page=this.page+1;
+      this.applets()
+      // prompt.showToast({
+      //       message: '触底'
+      //   })
+    },
+    toSwiper(index,id){
+        
+        storage.set({
+          key:"list",
+          value:this.appletsArr
+        })
+        router.push({
+            uri: '/CardDemo',
+            params: { index: index,id:id }
+        })
+    },
+}
+</script>
+
+<style>
+  .demo-page {
+    flex-direction: column;
+  }
+  .listDiv{
+    position: fixed;
+    top: 0px;
+    bottom: 0px;
+    width: 750px;
+  }
+  .listDiv{
+    width: 750px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .flex_wrap{
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+  }
+  .wallpaper {
+    width: 226px;
+    height: 401px;
+    background-color: #e3e9f9;
+    border-radius: 6px;
+    margin:12px 0 0 12px;
+}
+.wallpapera {
+    width: 226px;
+    height: 401px;
+    
+}
+
+.result-bg1 {
+    margin: 12px 0 0;
+}
+.result-bg1{
+    margin: 12px 0 0 12px;
+}
+</style>
